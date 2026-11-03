@@ -1,4 +1,4 @@
-package com.lucasrios.mercado;
+package com.mercadinho.app;
 
 import android.app.Activity;
 import android.os.Bundle;

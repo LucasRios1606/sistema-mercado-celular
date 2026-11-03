@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">Sistema para Mercado usando Celular</string>
-    <string name="vender">Vender</string>
-    <string name="produtos">Produtos</string>
-    <string name="vendas_de_hoje">Vendas de hoje</string>
-</resources>
