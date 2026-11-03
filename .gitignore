@@ -1,0 +1,17 @@
+# Arquivos gerados pelo Gradle e pela compilação
+.gradle/
+build/
+out/
+
+# Configurações locais do Android SDK e do editor
+local.properties
+.idea/
+*.iml
+
+# Chaves de assinatura do aplicativo
+*.jks
+*.keystore
+keystore.properties
+
+# Dados de testes locais
+/dados/
