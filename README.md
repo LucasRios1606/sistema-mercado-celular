@@ -15,12 +15,12 @@ Também planejamos funcionamento sem internet, dados salvos no aparelho e uma fo
 
 ## Estado atual
 
-Estamos começando pela definição da proposta. O aplicativo Android ainda não foi implementado.
+O projeto já tem a tela inicial com os botões **Vender**, **Produtos** e **Vendas de hoje**, além do ícone e do tema visual. Os botões ainda não têm ações e o aplicativo ainda não pode ser compilado.
 
 ## Próximos passos
 
-1. Preparar a estrutura mínima do projeto Android.
-2. Criar uma tela inicial simples.
+1. Completar a configuração para compilar e abrir o aplicativo.
+2. Fazer o botão **Produtos** cadastrar um produto.
 3. Construir e testar uma funcionalidade por vez.
 
 O desenvolvimento será feito em alterações pequenas, com explicação do que mudou e autorização do responsável antes de cada commit.
