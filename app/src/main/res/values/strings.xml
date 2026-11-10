@@ -4,4 +4,16 @@
     <string name="vender">Vender</string>
     <string name="produtos">Produtos</string>
     <string name="vendas_de_hoje">Vendas de hoje</string>
+    <string name="nome_produto">Nome do produto</string>
+    <string name="codigo_produto">Código de barras</string>
+    <string name="preco_produto">Preço (R$)</string>
+    <string name="quantidade_produto">Quantidade em estoque</string>
+    <string name="salvar_produto">Salvar produto</string>
+    <string name="produtos_cadastrados">Produtos cadastrados</string>
+    <string name="preencha_todos_campos">Preencha todos os campos.</string>
+    <string name="codigo_ja_cadastrado">Esse código já está cadastrado.</string>
+    <string name="produto_salvo">Produto salvo neste celular.</string>
+    <string name="valores_invalidos">Confira o preço e a quantidade.</string>
+    <string name="nenhum_produto">Nenhum produto cadastrado ainda.</string>
+    <string name="resumo_produto">%1$s · Código %2$s · Estoque: %3$d</string>
 </resources>
