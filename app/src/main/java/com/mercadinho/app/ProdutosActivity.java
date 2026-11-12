@@ -1,6 +1,8 @@
 package com.mercadinho.app;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -8,6 +10,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ScrollView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -78,7 +81,7 @@ public class ProdutosActivity extends Activity {
         }
 
         try {
-            long precoCentavos = Math.round(Double.parseDouble(precoTexto) * 100);
+            long precoCentavos = ValoresProduto.precoEmCentavos(precoTexto);
             int estoque = Integer.parseInt(quantidadeTexto);
             if (precoCentavos < 0 || estoque < 0) throw new NumberFormatException();
 
@@ -96,32 +99,35 @@ public class ProdutosActivity extends Activity {
             produto.put("precoCentavos", precoCentavos);
             produto.put("estoque", estoque);
             produtos.put(produto);
-            getSharedPreferences(PREFERENCIAS, MODE_PRIVATE).edit()
-                    .putString(CHAVE_LISTA, produtos.toString()).apply();
+            if (!gravarProdutos(produtos)) return;
             nome.setText("");
             codigo.setText("");
             preco.setText("");
             quantidade.setText("");
             atualizarLista();
             Toast.makeText(this, R.string.produto_salvo, Toast.LENGTH_SHORT).show();
-        } catch (NumberFormatException | JSONException e) {
-            Toast.makeText(this, R.string.valores_invalidos, Toast.LENGTH_SHORT).show();
+        } catch (IllegalArgumentException e) {
+            avisar(e instanceof NumberFormatException ? "Confira a quantidade em estoque." : e.getMessage());
+        } catch (JSONException e) {
+            avisar("Não foi possível ler os produtos. Os dados salvos foram mantidos.");
         }
     }
 
-    private JSONArray lerProdutos() {
+    private JSONArray lerProdutos() throws JSONException {
         String dados = getSharedPreferences(PREFERENCIAS, MODE_PRIVATE)
                 .getString(CHAVE_LISTA, "[]");
-        try {
-            return new JSONArray(dados);
-        } catch (JSONException e) {
-            return new JSONArray();
-        }
+        return new JSONArray(dados);
     }
 
     private void atualizarLista() {
         lista.removeAllViews();
-        JSONArray produtos = lerProdutos();
+        JSONArray produtos;
+        try {
+            produtos = lerProdutos();
+        } catch (JSONException e) {
+            Visual.vazio(lista, "Não foi possível ler os produtos", "Os dados salvos foram mantidos. Tente abrir esta tela novamente.");
+            return;
+        }
         if (produtos.length() == 0) {
             Visual.vazio(lista, "Seu primeiro produto", "Preencha os campos acima para começar o cadastro.");
             return;
@@ -136,9 +142,156 @@ public class ProdutosActivity extends Activity {
                 Visual.texto(cartao, valor, 26, Visual.VERDE, true);
                 Visual.texto(cartao, "Estoque: " + produto.getInt("estoque"), 17, Visual.TEXTO, false);
                 Visual.texto(cartao, "Código " + produto.getString("codigo"), 14, Visual.SUAVE, false);
+                String codigoOriginal = produto.getString("codigo");
+                Visual.botao(cartao, "Editar produto", false)
+                        .setOnClickListener(v -> editarProduto(codigoOriginal));
+                Visual.botao(cartao, "Repor estoque", false)
+                        .setOnClickListener(v -> reporEstoque(codigoOriginal));
             } catch (JSONException ignored) {
                 // Ignora apenas registros locais inválidos.
             }
+        }
+    }
+
+    private void avisar(String mensagem) {
+        Toast.makeText(this, mensagem, Toast.LENGTH_LONG).show();
+    }
+
+    private JSONObject encontrar(JSONArray produtos, String codigoOriginal) throws JSONException {
+        JSONObject encontrado = null;
+        for (int i = 0; i < produtos.length(); i++) {
+            JSONObject produto = produtos.getJSONObject(i);
+            if (produto.getString("codigo").equals(codigoOriginal)) {
+                if (encontrado != null) throw new JSONException("Código duplicado");
+                encontrado = produto;
+            }
+        }
+        if (encontrado == null) throw new JSONException("Produto não encontrado");
+        return encontrado;
+    }
+
+    private boolean gravarProdutos(JSONArray produtos) {
+        SharedPreferences prefs = getSharedPreferences(PREFERENCIAS, MODE_PRIVATE);
+        String anterior = prefs.getString(CHAVE_LISTA, "[]");
+        if (!prefs.edit().putString(CHAVE_LISTA, produtos.toString()).commit()) {
+            prefs.edit().putString(CHAVE_LISTA, anterior).commit();
+            avisar("Não foi possível salvar. Confira o espaço disponível no celular.");
+            return false;
+        }
+        return true;
+    }
+
+    private LinearLayout formularioDialogo() {
+        LinearLayout formulario = Visual.coluna(this);
+        int margem = Visual.dp(this, 20);
+        formulario.setPadding(margem, margem, margem, margem);
+        return formulario;
+    }
+
+    private AlertDialog dialogo(String titulo, LinearLayout formulario, String acao) {
+        ScrollView rolagem = new ScrollView(this);
+        rolagem.addView(formulario);
+        AlertDialog dialogo = new AlertDialog.Builder(this).setTitle(titulo)
+                .setView(rolagem).setNegativeButton("Cancelar", null)
+                .setPositiveButton(acao, null).create();
+        dialogo.setCanceledOnTouchOutside(false);
+        return dialogo;
+    }
+
+    private void editarProduto(String codigoOriginal) {
+        try {
+            JSONObject produto = encontrar(lerProdutos(), codigoOriginal);
+            LinearLayout formulario = formularioDialogo();
+            EditText novoNome = campo(formulario, R.string.nome_produto, "textCapSentences");
+            EditText novoCodigo = campo(formulario, R.string.codigo_produto, "number");
+            EditText novoPreco = campo(formulario, R.string.preco_produto, "numberDecimal");
+            novoNome.setText(produto.getString("nome"));
+            novoCodigo.setText(produto.getString("codigo"));
+            novoPreco.setText(java.math.BigDecimal.valueOf(produto.getLong("precoCentavos"), 2)
+                    .toPlainString().replace('.', ','));
+            Visual.texto(formulario, "O novo preço vale para as próximas vendas. As vendas já realizadas ficam como foram registradas.",
+                    15, Visual.SUAVE, false);
+            AlertDialog dialogo = dialogo("Editar produto", formulario, "Salvar alterações");
+            dialogo.setOnShowListener(ignorado -> dialogo.getButton(AlertDialog.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+                        String nomeEditado = novoNome.getText().toString().trim();
+                        String codigoEditado = novoCodigo.getText().toString().trim();
+                        if (nomeEditado.isEmpty() || codigoEditado.isEmpty()) {
+                            avisar("Preencha o nome e o código do produto.");
+                            return;
+                        }
+                        try {
+                            long valor = ValoresProduto.precoEmCentavos(novoPreco.getText().toString());
+                            JSONArray produtos = lerProdutos();
+                            JSONObject atual = encontrar(produtos, codigoOriginal);
+                            for (int i = 0; i < produtos.length(); i++) {
+                                JSONObject outro = produtos.getJSONObject(i);
+                                if (outro != atual && outro.getString("codigo").equals(codigoEditado)) {
+                                    avisar(getString(R.string.codigo_ja_cadastrado));
+                                    return;
+                                }
+                            }
+                            atual.put("nome", nomeEditado);
+                            atual.put("codigo", codigoEditado);
+                            atual.put("precoCentavos", valor);
+                            if (!gravarProdutos(produtos)) return;
+                            atualizarLista();
+                            dialogo.dismiss();
+                            avisar("Produto atualizado.");
+                        } catch (IllegalArgumentException e) {
+                            avisar(e.getMessage());
+                        } catch (JSONException e) {
+                            avisar("Não foi possível atualizar o produto. Os dados salvos foram mantidos.");
+                        }
+                    }));
+            dialogo.show();
+        } catch (JSONException e) {
+            avisar("Não foi possível abrir este produto.");
+        }
+    }
+
+    private void reporEstoque(String codigoOriginal) {
+        try {
+            JSONObject produto = encontrar(lerProdutos(), codigoOriginal);
+            LinearLayout formulario = formularioDialogo();
+            Visual.texto(formulario, produto.getString("nome"), 22, Visual.TEXTO, true);
+            int estoque = produto.getInt("estoque");
+            Visual.texto(formulario, "Estoque atual: " + estoque, 18, Visual.SUAVE, false);
+            EditText entrada = campo(formulario, R.string.quantidade_recebida, "number");
+            entrada.setHint("Ex.: 10");
+            TextView previa = Visual.texto(formulario, "Informe quantas unidades chegaram.", 18, Visual.VERDE, true);
+            entrada.addTextChangedListener(new android.text.TextWatcher() {
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    try {
+                        previa.setText("Estoque após a entrada: " + ValoresProduto.repor(estoque, s.toString()));
+                    } catch (IllegalArgumentException e) {
+                        previa.setText("Informe uma quantidade válida de unidades recebidas.");
+                    }
+                }
+                public void afterTextChanged(android.text.Editable s) { }
+            });
+            AlertDialog dialogo = dialogo("Repor estoque", formulario, "Adicionar ao estoque");
+            dialogo.setOnShowListener(ignorado -> dialogo.getButton(AlertDialog.BUTTON_POSITIVE)
+                    .setOnClickListener(v -> {
+                        try {
+                            JSONArray produtos = lerProdutos();
+                            JSONObject atual = encontrar(produtos, codigoOriginal);
+                            int novoEstoque = ValoresProduto.repor(atual.getInt("estoque"), entrada.getText().toString());
+                            atual.put("estoque", novoEstoque);
+                            if (!gravarProdutos(produtos)) return;
+                            atualizarLista();
+                            dialogo.dismiss();
+                            avisar("Estoque atualizado: " + novoEstoque + " unidades.");
+                        } catch (IllegalArgumentException e) {
+                            avisar(e.getMessage());
+                        } catch (JSONException e) {
+                            avisar("Não foi possível repor o estoque. Os dados salvos foram mantidos.");
+                        }
+                    }));
+            dialogo.show();
+        } catch (JSONException e) {
+            avisar("Não foi possível abrir o estoque deste produto.");
         }
     }
 }

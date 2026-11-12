@@ -8,6 +8,7 @@
     <string name="codigo_produto">Código de barras</string>
     <string name="preco_produto">Preço (R$)</string>
     <string name="quantidade_produto">Quantidade em estoque</string>
+    <string name="quantidade_recebida">Unidades que chegaram</string>
     <string name="salvar_produto">Salvar produto</string>
     <string name="produtos_cadastrados">Produtos cadastrados</string>
     <string name="preencha_todos_campos">Preencha todos os campos.</string>
