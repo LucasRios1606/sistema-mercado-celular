@@ -15,12 +15,29 @@ Também planejamos funcionamento sem internet, dados salvos no aparelho e uma fo
 
 ## Estado atual
 
-O projeto já tem a tela inicial com os botões **Vender**, **Produtos** e **Vendas de hoje**, além do ícone e do tema visual. Os botões ainda não têm ações e o aplicativo ainda não pode ser compilado.
+O projeto tem a tela inicial com os botões **Vender**, **Produtos** e **Vendas de hoje**, além do ícone e do tema visual. A geração do APK de teste está configurada no GitHub Actions.
+
+**Produtos** permite cadastrar nome, código de barras, preço e estoque, salvando os dados no celular.
+
+**Vender** permite selecionar produtos cadastrados, informar quantidades, remover itens e conferir o total. Ao confirmar a venda, o aplicativo registra data, itens e total, e baixa o estoque na mesma gravação local. Quantidades acima do estoque são bloqueadas. Sair de uma compra pede confirmação e não altera o estoque; girar a tela preserva os itens da compra.
+
+O botão **Vendas de hoje** ainda não tem ação. A leitura pela câmera e os backups também ficam para etapas seguintes.
 
 ## Próximos passos
 
-1. Completar a configuração para compilar e abrir o aplicativo.
-2. Fazer o botão **Produtos** cadastrar um produto.
+1. Compilar e testar a tela de vendas no celular.
+2. Fazer o botão **Vendas de hoje** consultar as vendas salvas.
 3. Construir e testar uma funcionalidade por vez.
+
+## Teste da lógica de compra
+
+Com um JDK instalado, execute na pasta do projeto:
+
+```text
+javac -encoding UTF-8 -d out/test app/src/main/java/com/mercadinho/app/Carrinho.java test/com/mercadinho/app/CarrinhoTest.java
+java -cp out/test com.mercadinho.app.CarrinhoTest
+```
+
+Esse teste verifica os cálculos e limites do carrinho. Não substitui a compilação Android nem os testes de gravação e navegação no celular.
 
 O desenvolvimento será feito em alterações pequenas, com explicação do que mudou e autorização do responsável antes de cada commit.
