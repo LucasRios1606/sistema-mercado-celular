@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="verde_principal">#286447</color>
-    <color name="fundo_claro">#F4F6F2</color>
+    <color name="verde_principal">#1C5B43</color>
+    <color name="fundo_claro">#F5F7F3</color>
+    <color name="texto_principal">#1E312B</color>
 </resources>

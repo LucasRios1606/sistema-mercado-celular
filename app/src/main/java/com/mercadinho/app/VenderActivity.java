@@ -9,7 +9,6 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,33 +38,38 @@ public class VenderActivity extends Activity {
     @Override
     protected void onCreate(Bundle estado) {
         super.onCreate(estado);
-        ScrollView rolagem = new ScrollView(this);
-        LinearLayout tela = new LinearLayout(this);
-        tela.setOrientation(LinearLayout.VERTICAL);
-        int margem = (int) (24 * getResources().getDisplayMetrics().density);
-        tela.setPadding(margem, margem, margem, margem);
-        rolagem.addView(tela);
-        texto(tela, "Vender", 28);
-        texto(tela, "Escolha o produto", 18);
+        LinearLayout tela = Visual.pagina(this);
+        Visual.cabecalho(tela, "Nova venda", "Adicione os produtos e confira a compra.", () -> onBackPressed());
+        LinearLayout formulario = Visual.cartao(tela);
+        Visual.texto(formulario, "Adicionar produto", 22, Visual.TEXTO, true);
+        TextView rotuloProduto = texto(formulario, "Escolha o produto", 16);
         selecao = new Spinner(this);
-        tela.addView(selecao);
-        texto(tela, "Quantidade", 18);
+        selecao.setId(android.view.View.generateViewId());
+        rotuloProduto.setLabelFor(selecao.getId());
+        selecao.setMinimumHeight(Visual.dp(this, 64));
+        selecao.setBackground(Visual.fundo(this, Visual.FUNDO, Visual.BORDA, 10));
+        Visual.inserir(formulario, selecao, 8);
+        TextView rotuloQuantidade = texto(formulario, "Quantidade", 16);
         quantidade = new EditText(this);
+        quantidade.setId(android.view.View.generateViewId());
+        rotuloQuantidade.setLabelFor(quantidade.getId());
         quantidade.setInputType(InputType.TYPE_CLASS_NUMBER);
         quantidade.setSingleLine(true);
         quantidade.setText("1");
-        tela.addView(quantidade);
-        adicionar = botao(tela, "Adicionar à compra");
+        Visual.campo(quantidade);
+        Visual.inserir(formulario, quantidade, 8);
+        adicionar = Visual.botao(formulario, "+  Adicionar à compra", true);
         adicionar.setOnClickListener(v -> adicionarProduto());
-        texto(tela, "Itens da compra", 22);
+        Visual.secao(tela, "Sua compra", "Confira os itens antes de finalizar.");
         lista = new LinearLayout(this);
         lista.setOrientation(LinearLayout.VERTICAL);
         tela.addView(lista);
-        total = texto(tela, "", 24);
-        finalizar = botao(tela, "Finalizar venda");
+        LinearLayout resumo = Visual.cartao(tela);
+        resumo.setBackground(Visual.fundo(this, Visual.VERDE, 0, 18));
+        Visual.texto(resumo, "TOTAL DA COMPRA", 14, android.graphics.Color.WHITE, true);
+        total = Visual.texto(resumo, "", 34, android.graphics.Color.WHITE, true);
+        finalizar = Visual.botao(tela, "Finalizar venda", true);
         finalizar.setOnClickListener(v -> confirmarVenda());
-        botao(tela, "Voltar").setOnClickListener(v -> onBackPressed());
-        setContentView(rolagem);
         carregarProdutos();
         if (estado != null) restaurarCarrinho(estado.getString("carrinho", "[]"));
         atualizarCompra();
@@ -76,21 +80,13 @@ public class VenderActivity extends Activity {
     }
 
     private TextView texto(LinearLayout tela, String valor, int tamanho) {
-        TextView texto = new TextView(this);
-        texto.setText(valor);
-        texto.setTextSize(tamanho);
-        tela.addView(texto);
+        TextView texto = Visual.texto(tela, valor, tamanho, Visual.TEXTO, true);
+        texto.setPadding(0, Visual.dp(this, 12), 0, 0);
         return texto;
     }
 
     private Button botao(LinearLayout tela, String rotulo) {
-        Button botao = new Button(this);
-        botao.setText(rotulo);
-        botao.setTextSize(20);
-        botao.setAllCaps(false);
-        botao.setMinHeight((int) (64 * getResources().getDisplayMetrics().density));
-        tela.addView(botao);
-        return botao;
+        return Visual.botao(tela, rotulo, false);
     }
 
     private String dinheiro(long centavos) {
@@ -121,8 +117,8 @@ public class VenderActivity extends Activity {
         }
         if (produtos.isEmpty()) opcoes.add("Nenhum produto disponível. Cadastre em Produtos.");
         ArrayAdapter<String> adaptador = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item, opcoes);
-        adaptador.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                R.layout.produto_selecionado, opcoes);
+        adaptador.setDropDownViewResource(R.layout.produto_opcao);
         selecao.setAdapter(adaptador);
         adicionar.setEnabled(!produtos.isEmpty());
         selecao.setEnabled(!produtos.isEmpty());
@@ -149,16 +145,20 @@ public class VenderActivity extends Activity {
 
     private void atualizarCompra() {
         lista.removeAllViews();
-        if (carrinho.vazio()) texto(lista, "Nenhum item na compra.", 18);
+        if (carrinho.vazio()) Visual.vazio(lista, "A compra começa aqui", "Escolha um produto acima e toque em Adicionar à compra.");
         for (Carrinho.Item item : carrinho.itens()) {
-            texto(lista, item.nome + "\n" + item.quantidade + " × "
-                    + dinheiro(item.precoCentavos) + " = " + dinheiro(item.subtotal()), 20);
-            botao(lista, "Remover " + item.nome).setOnClickListener(v -> {
+            LinearLayout cartao = Visual.cartao(lista);
+            Visual.texto(cartao, item.nome, 22, Visual.TEXTO, true);
+            Visual.texto(cartao, item.quantidade + " × " + dinheiro(item.precoCentavos), 17, Visual.SUAVE, false);
+            Visual.texto(cartao, dinheiro(item.subtotal()), 26, Visual.VERDE, true);
+            Button remover = botao(cartao, "Remover item");
+            remover.setContentDescription("Remover " + item.nome);
+            remover.setOnClickListener(v -> {
                 carrinho.remover(item.codigo);
                 atualizarCompra();
             });
         }
-        total.setText("Total: " + dinheiro(carrinho.total()));
+        total.setText(dinheiro(carrinho.total()));
         finalizar.setEnabled(!carrinho.vazio() && !salvando);
     }
 

@@ -23,6 +23,8 @@ O projeto tem a tela inicial com os botões **Vender**, **Produtos** e **Vendas 
 
 O botão **Vendas de hoje** ainda não tem ação. A leitura pela câmera e os backups também ficam para etapas seguintes.
 
+As telas usam fundo claro, botões grandes e cartões com preço e estoque destacados. O total da compra tem uma área própria. Os campos de cadastro têm rótulos permanentes, e a opção de histórico aparece como **Em breve**. O visual compartilhado fica na classe `Visual`.
+
 ## Próximos passos
 
 1. Compilar e testar a tela de vendas no celular.

@@ -6,7 +6,6 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,49 +26,41 @@ public class ProdutosActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        ScrollView rolagem = new ScrollView(this);
-        LinearLayout tela = new LinearLayout(this);
-        tela.setOrientation(LinearLayout.VERTICAL);
-        int margem = (int) (24 * getResources().getDisplayMetrics().density);
-        tela.setPadding(margem, margem, margem, margem);
-        rolagem.addView(tela);
+        LinearLayout tela = Visual.pagina(this);
+        Visual.cabecalho(tela, "Produtos", "Organize os produtos do seu mercadinho.", () -> finish());
+        LinearLayout formulario = Visual.cartao(tela);
+        Visual.texto(formulario, "Cadastrar produto", 22, Visual.TEXTO, true);
+        nome = campo(formulario, R.string.nome_produto, "textCapSentences");
+        codigo = campo(formulario, R.string.codigo_produto, "number");
+        preco = campo(formulario, R.string.preco_produto, "numberDecimal");
+        quantidade = campo(formulario, R.string.quantidade_produto, "number");
 
-        TextView titulo = new TextView(this);
-        titulo.setText(R.string.produtos);
-        titulo.setTextSize(28);
-        tela.addView(titulo);
-
-        nome = campo(tela, R.string.nome_produto, "textCapSentences");
-        codigo = campo(tela, R.string.codigo_produto, "number");
-        preco = campo(tela, R.string.preco_produto, "numberDecimal");
-        quantidade = campo(tela, R.string.quantidade_produto, "number");
-
-        Button salvar = new Button(this);
-        salvar.setText(R.string.salvar_produto);
-        tela.addView(salvar);
+        Button salvar = Visual.botao(formulario, getString(R.string.salvar_produto), true);
         salvar.setOnClickListener(v -> salvarProduto());
 
-        TextView tituloLista = new TextView(this);
-        tituloLista.setText(R.string.produtos_cadastrados);
-        tituloLista.setTextSize(22);
-        tituloLista.setPadding(0, margem, 0, 8);
-        tela.addView(tituloLista);
+        Visual.secao(tela, "Produtos cadastrados", "Preços e quantidades disponíveis.");
 
         lista = new LinearLayout(this);
         lista.setOrientation(LinearLayout.VERTICAL);
         tela.addView(lista, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        setContentView(rolagem);
         atualizarLista();
     }
 
     private EditText campo(LinearLayout tela, int rotulo, String tipo) {
         EditText campo = new EditText(this);
+        campo.setId(android.view.View.generateViewId());
+        TextView etiqueta = Visual.texto(tela, getString(rotulo), 16, Visual.TEXTO, true);
+        etiqueta.setPadding(0, Visual.dp(this, 12), 0, Visual.dp(this, 4));
+        etiqueta.setLabelFor(campo.getId());
         campo.setSingleLine(true);
-        campo.setHint(rotulo);
+        campo.setHint(rotulo == R.string.nome_produto ? "Ex.: Arroz 5 kg"
+                : rotulo == R.string.preco_produto ? "0,00"
+                : rotulo == R.string.quantidade_produto ? "0" : "Digite o código");
         int entrada = tipo.equals("textCapSentences")
                 ? 0x00002001 : tipo.equals("numberDecimal") ? 0x00002002 : 0x00000002;
         campo.setInputType(entrada);
+        Visual.campo(campo);
         tela.addView(campo, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return campo;
@@ -132,21 +123,19 @@ public class ProdutosActivity extends Activity {
         lista.removeAllViews();
         JSONArray produtos = lerProdutos();
         if (produtos.length() == 0) {
-            TextView vazio = new TextView(this);
-            vazio.setText(R.string.nenhum_produto);
-            lista.addView(vazio);
+            Visual.vazio(lista, "Seu primeiro produto", "Preencha os campos acima para começar o cadastro.");
             return;
         }
         for (int i = 0; i < produtos.length(); i++) {
             try {
                 JSONObject produto = produtos.getJSONObject(i);
-                TextView item = new TextView(this);
-                item.setText(getString(R.string.resumo_produto,
-                        produto.getString("nome"), produto.getString("codigo"),
-                        produto.getInt("estoque")));
-                item.setTextSize(18);
-                item.setPadding(0, 12, 0, 12);
-                lista.addView(item);
+                LinearLayout cartao = Visual.cartao(lista);
+                Visual.texto(cartao, produto.getString("nome"), 22, Visual.TEXTO, true);
+                String valor = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("pt", "BR"))
+                        .format(java.math.BigDecimal.valueOf(produto.getLong("precoCentavos"), 2));
+                Visual.texto(cartao, valor, 26, Visual.VERDE, true);
+                Visual.texto(cartao, "Estoque: " + produto.getInt("estoque"), 17, Visual.TEXTO, false);
+                Visual.texto(cartao, "Código " + produto.getString("codigo"), 14, Visual.SUAVE, false);
             } catch (JSONException ignored) {
                 // Ignora apenas registros locais inválidos.
             }
