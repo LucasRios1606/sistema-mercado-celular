@@ -21,14 +21,16 @@ O projeto tem a tela inicial com os botões **Vender**, **Produtos** e **Vendas 
 
 **Vender** permite selecionar produtos cadastrados, informar quantidades, remover itens e conferir o total. Ao confirmar a venda, o aplicativo registra data, itens e total, e baixa o estoque na mesma gravação local. Quantidades acima do estoque são bloqueadas. Sair de uma compra pede confirmação e não altera o estoque; girar a tela preserva os itens da compra.
 
-O botão **Vendas de hoje** ainda não tem ação. A leitura pela câmera e os backups também ficam para etapas seguintes.
+**Vendas de hoje** consulta os registros locais do dia, mostrando total vendido, quantidade de vendas, horário e produtos de cada compra, da mais recente para a mais antiga. O dia segue o fuso do celular. A tela atualiza ao ser aberta, ao voltar para o aplicativo, à meia-noite ou pelo botão **Atualizar**. A consulta usa os preços salvos em cada venda e não altera o estoque nem os registros. Se houver dados inválidos, apresenta um aviso em vez de mostrar um total incompleto.
 
-As telas usam fundo claro, botões grandes e cartões com preço e estoque destacados. O total da compra tem uma área própria. Os campos de cadastro têm rótulos permanentes, e a opção de histórico aparece como **Em breve**. O visual compartilhado fica na classe `Visual`.
+A leitura pela câmera e os backups ficam para etapas seguintes.
+
+As telas usam fundo claro, botões grandes e cartões com preço e estoque destacados. O total da compra tem uma área própria. Os campos de cadastro têm rótulos permanentes. O visual compartilhado fica na classe `Visual`.
 
 ## Próximos passos
 
-1. Compilar e testar a tela de vendas no celular.
-2. Fazer o botão **Vendas de hoje** consultar as vendas salvas.
+1. Compilar e testar a consulta de vendas de hoje no celular.
+2. Conferir o fluxo completo: cadastrar produto, vender e consultar o total do dia.
 3. Construir e testar uma funcionalidade por vez.
 
 ## Teste da lógica de compra
@@ -38,8 +40,10 @@ Com um JDK instalado, execute na pasta do projeto:
 ```text
 javac -encoding UTF-8 -d out/test app/src/main/java/com/mercadinho/app/Carrinho.java test/com/mercadinho/app/CarrinhoTest.java
 java -cp out/test com.mercadinho.app.CarrinhoTest
+javac -encoding UTF-8 -d out/test app/src/main/java/com/mercadinho/app/VendasDoDia.java test/com/mercadinho/app/VendasDoDiaTest.java
+java -cp out/test com.mercadinho.app.VendasDoDiaTest
 ```
 
-Esse teste verifica os cálculos e limites do carrinho. Não substitui a compilação Android nem os testes de gravação e navegação no celular.
+Os testes verificam os cálculos e limites do carrinho, a soma das vendas e a seleção do dia em diferentes fusos, incluindo mudanças de horário de verão. O teste de datas requer JDK 8 ou superior. Não substituem a compilação Android nem os testes de gravação e navegação no celular.
 
 O desenvolvimento será feito em alterações pequenas, com explicação do que mudou e autorização do responsável antes de cada commit.

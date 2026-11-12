@@ -26,8 +26,8 @@ public class MainActivity extends Activity {
                 .setOnClickListener(v -> startActivity(new Intent(this, VenderActivity.class)));
         acao(tela, "Produtos", "Cadastrar e consultar o estoque", false)
                 .setOnClickListener(v -> startActivity(new Intent(this, ProdutosActivity.class)));
-        Button historico = acao(tela, "Vendas de hoje", "Em breve", false);
-        historico.setEnabled(false);
+        acao(tela, "Vendas de hoje", "Conferir as vendas e o total do dia", false)
+                .setOnClickListener(v -> startActivity(new Intent(this, VendasHojeActivity.class)));
         TextView rodape = Visual.texto(tela, "Seus dados ficam salvos neste celular.", 14, Visual.SUAVE, false);
         rodape.setPadding(0, Visual.dp(this, 24), 0, 0);
         rodape.setGravity(Gravity.CENTER);
