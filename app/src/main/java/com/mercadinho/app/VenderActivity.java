@@ -26,8 +26,13 @@ import java.util.UUID;
 public class VenderActivity extends Activity {
     private final Carrinho carrinho = new Carrinho();
     private final ArrayList<JSONObject> produtos = new ArrayList<>();
+    private final ArrayList<JSONObject> produtosFiltrados = new ArrayList<>();
     private final NumberFormat moeda = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
     private Spinner selecao;
+    private EditText busca;
+    private TextView resultadoBusca;
+    private Button limparBusca;
+    private boolean erroProdutos;
     private EditText quantidade;
     private LinearLayout lista;
     private TextView total;
@@ -42,6 +47,18 @@ public class VenderActivity extends Activity {
         Visual.cabecalho(tela, "Nova venda", "Adicione os produtos e confira a compra.", () -> onBackPressed());
         LinearLayout formulario = Visual.cartao(tela);
         Visual.texto(formulario, "Adicionar produto", 22, Visual.TEXTO, true);
+        TextView rotuloBusca = texto(formulario, "Buscar por nome ou código", 16);
+        busca = new EditText(this);
+        busca.setId(android.view.View.generateViewId());
+        rotuloBusca.setLabelFor(busca.getId());
+        busca.setSingleLine(true);
+        busca.setInputType(InputType.TYPE_CLASS_TEXT);
+        busca.setHint("Ex.: arroz ou 789123");
+        Visual.campo(busca);
+        Visual.inserir(formulario, busca, 8);
+        limparBusca = Visual.botao(formulario, "Limpar busca", false);
+        limparBusca.setOnClickListener(v -> busca.setText(""));
+        resultadoBusca = Visual.texto(formulario, "", 16, Visual.SUAVE, false);
         TextView rotuloProduto = texto(formulario, "Escolha o produto", 16);
         selecao = new Spinner(this);
         selecao.setId(android.view.View.generateViewId());
@@ -71,7 +88,19 @@ public class VenderActivity extends Activity {
         finalizar = Visual.botao(tela, "Finalizar venda", true);
         finalizar.setOnClickListener(v -> confirmarVenda());
         carregarProdutos();
-        if (estado != null) restaurarCarrinho(estado.getString("carrinho", "[]"));
+        busca.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                filtrarProdutos();
+            }
+            public void afterTextChanged(android.text.Editable s) { }
+        });
+        if (estado != null) {
+            restaurarCarrinho(estado.getString("carrinho", "[]"));
+            busca.setText(estado.getString("busca", ""));
+            selecionarCodigo(estado.getString("produtoSelecionado", ""));
+            quantidade.setText(estado.getString("quantidade", "1"));
+        }
         atualizarCompra();
     }
 
@@ -99,36 +128,77 @@ public class VenderActivity extends Activity {
 
     private void carregarProdutos() {
         produtos.clear();
-        ArrayList<String> opcoes = new ArrayList<>();
+        erroProdutos = false;
         try {
             JSONArray dados = new JSONArray(preferencias().getString("lista", "[]"));
             for (int i = 0; i < dados.length(); i++) {
                 JSONObject produto = dados.getJSONObject(i);
-                String rotulo = produto.getString("nome") + " · "
-                        + dinheiro(produto.getLong("precoCentavos")) + " · Estoque: "
-                        + produto.getInt("estoque") + " · " + produto.getString("codigo");
+                // Valida os campos usados na lista antes de disponibilizar o cadastro.
+                produto.getString("nome");
+                produto.getString("codigo");
+                produto.getLong("precoCentavos");
+                produto.getInt("estoque");
                 produtos.add(produto);
-                opcoes.add(rotulo);
             }
         } catch (JSONException e) {
             produtos.clear();
-            opcoes.clear();
+            erroProdutos = true;
             avisar("Não foi possível ler os produtos salvos.");
         }
-        if (produtos.isEmpty()) opcoes.add("Nenhum produto disponível. Cadastre em Produtos.");
+        filtrarProdutos();
+    }
+
+    private String codigoSelecionado() {
+        int posicao = selecao.getSelectedItemPosition();
+        return posicao >= 0 && posicao < produtosFiltrados.size()
+                ? produtosFiltrados.get(posicao).optString("codigo", "") : "";
+    }
+
+    private void selecionarCodigo(String codigo) {
+        for (int i = 0; i < produtosFiltrados.size(); i++) {
+            if (produtosFiltrados.get(i).optString("codigo", "").equals(codigo)) {
+                selecao.setSelection(i);
+                return;
+            }
+        }
+    }
+
+    private void filtrarProdutos() {
+        String anterior = codigoSelecionado();
+        String consulta = busca.getText().toString();
+        produtosFiltrados.clear();
+        ArrayList<String> opcoes = new ArrayList<>();
+        for (JSONObject produto : produtos) {
+            if (BuscaProduto.corresponde(produto.optString("nome"), produto.optString("codigo"), consulta)) {
+                produtosFiltrados.add(produto);
+                opcoes.add(produto.optString("nome") + " · "
+                        + dinheiro(produto.optLong("precoCentavos")) + " · Estoque: "
+                        + produto.optInt("estoque") + " · " + produto.optString("codigo"));
+            }
+        }
+        String mensagem;
+        if (erroProdutos) mensagem = "Não foi possível carregar os produtos.";
+        else if (produtos.isEmpty()) mensagem = "Cadastre seu primeiro produto em Produtos.";
+        else if (produtosFiltrados.isEmpty()) mensagem = "Nenhum produto encontrado. Tente outro nome ou código.";
+        else mensagem = produtosFiltrados.size() + (produtosFiltrados.size() == 1
+                ? " produto disponível na lista." : " produtos disponíveis na lista.");
+        resultadoBusca.setText(mensagem);
+        if (produtosFiltrados.isEmpty()) opcoes.add("Nenhum produto para selecionar");
         ArrayAdapter<String> adaptador = new ArrayAdapter<>(this,
                 R.layout.produto_selecionado, opcoes);
         adaptador.setDropDownViewResource(R.layout.produto_opcao);
         selecao.setAdapter(adaptador);
-        adicionar.setEnabled(!produtos.isEmpty());
-        selecao.setEnabled(!produtos.isEmpty());
+        selecionarCodigo(anterior);
+        adicionar.setEnabled(!produtosFiltrados.isEmpty());
+        selecao.setEnabled(!produtosFiltrados.isEmpty());
+        limparBusca.setEnabled(!consulta.isEmpty());
     }
 
     private void adicionarProduto() {
         int posicao = selecao.getSelectedItemPosition();
-        if (posicao < 0 || posicao >= produtos.size()) return;
+        if (posicao < 0 || posicao >= produtosFiltrados.size()) return;
         try {
-            JSONObject produto = produtos.get(posicao);
+            JSONObject produto = produtosFiltrados.get(posicao);
             int unidades = Integer.parseInt(quantidade.getText().toString().trim());
             carrinho.adicionar(produto.getString("codigo"), produto.getString("nome"),
                     produto.getLong("precoCentavos"), unidades, produto.getInt("estoque"));
@@ -232,6 +302,9 @@ public class VenderActivity extends Activity {
     @Override
     protected void onSaveInstanceState(Bundle estado) {
         super.onSaveInstanceState(estado);
+        estado.putString("busca", busca.getText().toString());
+        estado.putString("produtoSelecionado", codigoSelecionado());
+        estado.putString("quantidade", quantidade.getText().toString());
         try {
             estado.putString("carrinho", itensJson().toString());
         } catch (JSONException e) {

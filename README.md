@@ -19,7 +19,7 @@ O projeto tem a tela inicial com os botões **Vender**, **Produtos** e **Vendas 
 
 **Produtos** permite cadastrar nome, código de barras, preço e estoque, salvando os dados no celular. Cada produto tem **Editar produto** para alterar nome, código e preço, e **Repor estoque** para somar as unidades recebidas ao estoque atual, com prévia da quantidade resultante. Códigos duplicados e entradas inválidas são bloqueados. Cancelar os formulários não altera os dados. A edição mantém o estoque e não modifica os nomes ou preços registrados nas vendas antigas. Preços são tratados em centavos, aceitando vírgula ou ponto e até duas casas decimais.
 
-**Vender** permite selecionar produtos cadastrados, informar quantidades, remover itens e conferir o total. Ao confirmar a venda, o aplicativo registra data, itens e total, e baixa o estoque na mesma gravação local. Quantidades acima do estoque são bloqueadas. Sair de uma compra pede confirmação e não altera o estoque; girar a tela preserva os itens da compra.
+**Vender** permite buscar produtos por parte do nome ou código, selecionar um resultado, informar quantidades, remover itens e conferir o total. A busca filtra enquanto se digita, ignora diferenças entre maiúsculas e minúsculas e acentos, e tem um botão para limpar o filtro. Sem resultados, o botão de adicionar fica desativado. Pesquisar não altera os itens já adicionados à compra. Ao confirmar a venda, o aplicativo registra data, itens e total, e baixa o estoque na mesma gravação local. Quantidades acima do estoque são bloqueadas. Sair de uma compra pede confirmação e não altera o estoque; girar a tela preserva os itens da compra, o texto da busca, o produto selecionado e a quantidade digitada.
 
 **Vendas de hoje** consulta os registros locais do dia, mostrando total vendido, quantidade de vendas, horário e produtos de cada compra, da mais recente para a mais antiga. O dia segue o fuso do celular. A tela atualiza ao ser aberta, ao voltar para o aplicativo, à meia-noite ou pelo botão **Atualizar**. A consulta usa os preços salvos em cada venda e não altera o estoque nem os registros. Se houver dados inválidos, apresenta um aviso em vez de mostrar um total incompleto.
 
@@ -29,8 +29,8 @@ As telas usam fundo claro, botões grandes e cartões com preço e estoque desta
 
 ## Próximos passos
 
-1. Compilar e testar a edição de produtos e a reposição de estoque no celular.
-2. Conferir o fluxo completo: cadastrar, vender, editar o preço, repor o estoque e verificar que as vendas anteriores mantêm os valores originais.
+1. Compilar e testar a busca por nome e código na tela de venda.
+2. Conferir no celular: buscar produtos diferentes, adicioná-los à mesma compra, limpar a busca, pesquisar um nome inexistente e girar a tela.
 3. Construir e testar uma funcionalidade por vez.
 
 ## Teste da lógica de compra
@@ -44,6 +44,8 @@ javac -encoding UTF-8 -d out/test app/src/main/java/com/mercadinho/app/VendasDoD
 java -cp out/test com.mercadinho.app.VendasDoDiaTest
 javac -encoding UTF-8 -d out/test app/src/main/java/com/mercadinho/app/ValoresProduto.java test/com/mercadinho/app/ValoresProdutoTest.java
 java -cp out/test com.mercadinho.app.ValoresProdutoTest
+javac -encoding UTF-8 -d out/test app/src/main/java/com/mercadinho/app/BuscaProduto.java test/com/mercadinho/app/BuscaProdutoTest.java
+java -cp out/test com.mercadinho.app.BuscaProdutoTest
 ```
 
 Os testes verificam os cálculos e limites do carrinho, a soma das vendas, a seleção do dia em diferentes fusos, os preços em centavos e os limites da reposição de estoque. O teste de datas requer JDK 8 ou superior. Não substituem a compilação Android nem os testes de gravação e navegação no celular.
