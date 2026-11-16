@@ -16,9 +16,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.mlkit.codescanner.GmsBarcodeScanner;
-import com.google.android.gms.mlkit.codescanner.GmsBarcodeScannerOptions;
-import com.google.android.gms.mlkit.codescanner.GmsBarcodeScanning;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanner;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 import com.google.mlkit.vision.barcode.common.Barcode;
 
 import org.json.JSONArray;
