@@ -24,6 +24,7 @@ public class ProdutosActivity extends Activity {
     private EditText codigo;
     private EditText preco;
     private EditText quantidade;
+    private EditText busca;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,12 +43,37 @@ public class ProdutosActivity extends Activity {
         salvar.setOnClickListener(v -> salvarProduto());
 
         Visual.secao(tela, "Produtos cadastrados", "Preços e quantidades disponíveis.");
+        busca = new EditText(this);
+        busca.setId(android.view.View.generateViewId());
+        TextView rotuloBusca = Visual.texto(tela, "Buscar produto", 16, Visual.TEXTO, true);
+        rotuloBusca.setLabelFor(busca.getId());
+        busca.setSingleLine(true);
+        busca.setHint("Digite o nome ou código");
+        Visual.campo(busca);
+        Visual.inserir(tela, busca, 8);
+        if (savedInstanceState != null) {
+            busca.setText(savedInstanceState.getString("buscaProdutos", ""));
+        }
+        Visual.botao(tela, "Limpar busca", false).setOnClickListener(v -> busca.setText(""));
 
         lista = new LinearLayout(this);
         lista.setOrientation(LinearLayout.VERTICAL);
         tela.addView(lista, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        busca.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                atualizarLista();
+            }
+            public void afterTextChanged(android.text.Editable s) { }
+        });
         atualizarLista();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle estado) {
+        estado.putString("buscaProdutos", busca.getText().toString());
+        super.onSaveInstanceState(estado);
     }
 
     private EditText campo(LinearLayout tela, int rotulo, String tipo) {
@@ -132,24 +158,37 @@ public class ProdutosActivity extends Activity {
             Visual.vazio(lista, "Seu primeiro produto", "Preencha os campos acima para começar o cadastro.");
             return;
         }
+        int encontrados = 0;
+        boolean registroInvalido = false;
+        String consulta = busca.getText().toString();
         for (int i = 0; i < produtos.length(); i++) {
             try {
                 JSONObject produto = produtos.getJSONObject(i);
-                LinearLayout cartao = Visual.cartao(lista);
-                Visual.texto(cartao, produto.getString("nome"), 22, Visual.TEXTO, true);
-                String valor = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("pt", "BR"))
-                        .format(java.math.BigDecimal.valueOf(produto.getLong("precoCentavos"), 2));
-                Visual.texto(cartao, valor, 26, Visual.VERDE, true);
-                Visual.texto(cartao, "Estoque: " + produto.getInt("estoque"), 17, Visual.TEXTO, false);
-                Visual.texto(cartao, "Código " + produto.getString("codigo"), 14, Visual.SUAVE, false);
+                String nomeProduto = produto.getString("nome");
                 String codigoOriginal = produto.getString("codigo");
+                long precoCentavos = produto.getLong("precoCentavos");
+                int estoque = produto.getInt("estoque");
+                if (!BuscaProduto.corresponde(nomeProduto, codigoOriginal, consulta)) continue;
+                encontrados++;
+                LinearLayout cartao = Visual.cartao(lista);
+                Visual.texto(cartao, nomeProduto, 22, Visual.TEXTO, true);
+                String valor = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("pt", "BR"))
+                        .format(java.math.BigDecimal.valueOf(precoCentavos, 2));
+                Visual.texto(cartao, valor, 26, Visual.VERDE, true);
+                Visual.texto(cartao, "Estoque: " + estoque, 17, Visual.TEXTO, false);
+                Visual.texto(cartao, "Código " + codigoOriginal, 14, Visual.SUAVE, false);
                 Visual.botao(cartao, "Editar produto", false)
                         .setOnClickListener(v -> editarProduto(codigoOriginal));
                 Visual.botao(cartao, "Repor estoque", false)
                         .setOnClickListener(v -> reporEstoque(codigoOriginal));
             } catch (JSONException ignored) {
-                // Ignora apenas registros locais inválidos.
+                registroInvalido = true;
             }
+        }
+        if (registroInvalido) {
+            Visual.vazio(lista, "Alguns produtos não puderam ser exibidos", "Os dados salvos foram mantidos.");
+        } else if (encontrados == 0) {
+            Visual.vazio(lista, "Nenhum produto encontrado", "Tente outro nome ou código, ou toque em Limpar busca.");
         }
     }
 

@@ -23,7 +23,9 @@ O projeto tem a tela inicial com os botões **Vender**, **Produtos** e **Vendas 
 
 **Vendas de hoje** consulta os registros locais do dia, mostrando total vendido, quantidade de vendas, horário e produtos de cada compra, da mais recente para a mais antiga. O dia segue o fuso do celular. A tela atualiza ao ser aberta, ao voltar para o aplicativo, à meia-noite ou pelo botão **Atualizar**. A consulta usa os preços salvos em cada venda e não altera o estoque nem os registros. Se houver dados inválidos, apresenta um aviso em vez de mostrar um total incompleto.
 
-A leitura pela câmera e os backups ficam para etapas seguintes.
+A tela **Produtos** também permite buscar por parte do nome ou código enquanto se digita, ignorando acentos e diferenças entre maiúsculas e minúsculas. **Limpar busca** mostra a lista completa novamente. O filtro é mantido ao girar a tela e reaplicado após cadastrar, editar ou repor estoque. Quando não há resultados, a tela orienta a mudar ou limpar a busca.
+
+Os backups ficam para uma etapa seguinte.
 
 As telas usam fundo claro, botões grandes e cartões com preço e estoque destacados. O total da compra tem uma área própria. Os campos de cadastro têm rótulos permanentes. O visual compartilhado fica na classe `Visual`.
 
