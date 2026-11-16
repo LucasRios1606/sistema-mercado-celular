@@ -9,6 +9,8 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,6 +40,9 @@ public class VenderActivity extends Activity {
     private TextView total;
     private Button adicionar;
     private Button finalizar;
+    private String formaPagamento = Pagamento.DINHEIRO;
+    private Pagamento pagamento;
+    private TextView previaTroco;
     private boolean salvando;
 
     @Override
@@ -243,11 +248,90 @@ public class VenderActivity extends Activity {
 
     private void confirmarVenda() {
         if (carrinho.vazio() || salvando) return;
-        new AlertDialog.Builder(this).setTitle("Finalizar venda?")
-                .setMessage("Total: " + dinheiro(carrinho.total())
-                        + "\nA venda será salva e os itens serão descontados do estoque.")
-                .setNegativeButton("Voltar", null)
-                .setPositiveButton("Confirmar venda", (dialogo, botao) -> salvarVenda()).show();
+        LinearLayout conteudo = Visual.coluna(this);
+        int margem = Visual.dp(this, 20);
+        conteudo.setPadding(margem, margem, margem, margem);
+        Visual.texto(conteudo, "Total: " + dinheiro(carrinho.total()), 25, Visual.VERDE, true);
+        Visual.texto(conteudo, "Como o cliente vai pagar?", 17, Visual.TEXTO, true);
+        Visual.texto(conteudo, "O app só registra a forma de pagamento. Cartão e Pix são recebidos nos equipamentos do mercado.",
+                15, Visual.SUAVE, false);
+        RadioGroup formas = new RadioGroup(this);
+        formas.setOrientation(RadioGroup.VERTICAL);
+        adicionarForma(formas, "Dinheiro", Pagamento.DINHEIRO);
+        adicionarForma(formas, "Pix", Pagamento.PIX);
+        adicionarForma(formas, "Cartão", Pagamento.CARTAO);
+        int escolhaInicial = formaPagamento.equals(Pagamento.PIX) ? 1
+                : formaPagamento.equals(Pagamento.CARTAO) ? 2 : 0;
+        formas.check(formas.getChildAt(escolhaInicial).getId());
+        Visual.inserir(conteudo, formas, 8);
+        TextView rotuloRecebido = Visual.texto(conteudo, "Valor recebido (R$)", 16, Visual.TEXTO, true);
+        EditText recebido = new EditText(this);
+        recebido.setId(android.view.View.generateViewId());
+        rotuloRecebido.setLabelFor(recebido.getId());
+        recebido.setSingleLine(true);
+        recebido.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        recebido.setHint("Ex.: 50,00");
+        Visual.campo(recebido);
+        Visual.inserir(conteudo, recebido, 8);
+        previaTroco = Visual.texto(conteudo, "", 20, Visual.VERDE, true);
+        AlertDialog dialogo = new AlertDialog.Builder(this).setTitle("Finalizar venda")
+                .setView(conteudo).setNegativeButton("Voltar", null)
+                .setPositiveButton("Confirmar venda", null).create();
+        formas.setOnCheckedChangeListener((grupo, id) -> {
+            View campoEscolhido = grupo.findViewById(id);
+            formaPagamento = campoEscolhido == null ? Pagamento.DINHEIRO
+                    : String.valueOf(campoEscolhido.getTag());
+            atualizarTroco(recebido);
+        });
+        recebido.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            public void onTextChanged(CharSequence s, int start, int before, int count) { atualizarTroco(recebido); }
+            public void afterTextChanged(android.text.Editable s) { }
+        });
+        atualizarTroco(recebido);
+        dialogo.setOnShowListener(ignorado -> dialogo.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener(v -> {
+                    try {
+                        pagamento = Pagamento.criar(formaPagamento, carrinho.total(), recebido.getText().toString());
+                        salvarVenda();
+                        if (carrinho.vazio()) dialogo.dismiss();
+                    } catch (IllegalArgumentException e) {
+                        avisar(e.getMessage());
+                    }
+                }));
+        dialogo.setOnDismissListener(d -> pagamento = null);
+        dialogo.show();
+    }
+
+    private void adicionarForma(RadioGroup grupo, String rotulo, String forma) {
+        RadioButton opcao = new RadioButton(this);
+        opcao.setId(android.view.View.generateViewId());
+        opcao.setTag(forma);
+        opcao.setText(rotulo);
+        opcao.setTextSize(18);
+        opcao.setMinHeight(Visual.dp(this, 52));
+        grupo.addView(opcao);
+    }
+
+    private void atualizarTroco(EditText recebido) {
+        boolean dinheiro = Pagamento.DINHEIRO.equals(formaPagamento);
+        recebido.setVisibility(dinheiro ? android.view.View.VISIBLE : android.view.View.GONE);
+        previaTroco.setVisibility(dinheiro ? android.view.View.VISIBLE : android.view.View.GONE);
+        if (!dinheiro) {
+            previaTroco.setText("");
+            return;
+        }
+        String texto = recebido.getText().toString().trim();
+        if (texto.isEmpty()) {
+            previaTroco.setText("Digite o valor recebido para calcular o troco.");
+            return;
+        }
+        try {
+            Pagamento rascunho = Pagamento.criar(formaPagamento, carrinho.total(), texto);
+            previaTroco.setText("Troco: " + dinheiro(rascunho.trocoCentavos));
+        } catch (IllegalArgumentException e) {
+            previaTroco.setText(e.getMessage());
+        }
     }
 
     private void salvarVenda() {
@@ -276,9 +360,15 @@ public class VenderActivity extends Activity {
                 }
                 encontrado.put("estoque", encontrado.getInt("estoque") - item.quantidade);
             }
+            if (pagamento == null) {
+                avisar("Escolha a forma de pagamento antes de confirmar.");
+                return;
+            }
             vendas.put(new JSONObject().put("id", UUID.randomUUID().toString())
                     .put("data", System.currentTimeMillis()).put("totalCentavos", carrinho.total())
-                    .put("itens", itensJson()));
+                    .put("formaPagamento", pagamento.forma)
+                    .put("valorRecebidoCentavos", pagamento.recebidoCentavos)
+                    .put("trocoCentavos", pagamento.trocoCentavos).put("itens", itensJson()));
             // As duas alterações pertencem ao mesmo arquivo e à mesma gravação.
             boolean salvo = prefs.edit().putString("lista", estoque.toString())
                     .putString("vendas", vendas.toString()).commit();

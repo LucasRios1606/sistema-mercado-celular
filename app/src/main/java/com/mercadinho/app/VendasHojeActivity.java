@@ -89,7 +89,21 @@ public class VendasHojeActivity extends Activity {
                 }
                 if (somaItens != valor) throw new JSONException("Total divergente");
                 resumo.adicionar(valor);
-                vendas.add(new Registro(instante, valor, detalhes));
+                String formaPagamento = venda.optString("formaPagamento", "");
+                long troco = venda.optLong("trocoCentavos", 0);
+                if (troco < 0 || troco > Long.MAX_VALUE - valor) throw new JSONException("Troco inválido");
+                if (!formaPagamento.isEmpty() && !formaPagamento.equals(Pagamento.DINHEIRO)
+                        && !formaPagamento.equals(Pagamento.PIX) && !formaPagamento.equals(Pagamento.CARTAO)) {
+                    throw new JSONException("Forma de pagamento inválida");
+                }
+                if ((Pagamento.PIX.equals(formaPagamento) || Pagamento.CARTAO.equals(formaPagamento)) && troco != 0) {
+                    throw new JSONException("Troco inválido");
+                }
+                if (Pagamento.DINHEIRO.equals(formaPagamento)
+                        && venda.optLong("valorRecebidoCentavos", -1) != valor + troco) {
+                    throw new JSONException("Valor recebido inválido");
+                }
+                vendas.add(new Registro(instante, valor, detalhes, formaPagamento, troco));
             }
         } catch (JSONException | IllegalArgumentException e) {
             Visual.vazio(tela, "Não foi possível consultar as vendas",
@@ -115,6 +129,12 @@ public class VendasHojeActivity extends Activity {
             LinearLayout cartao = Visual.cartao(tela);
             Visual.texto(cartao, "Venda às " + horario.format(new Date(venda.data)), 22, Visual.TEXTO, true);
             Visual.texto(cartao, dinheiro(venda.total), 26, Visual.VERDE, true);
+            if (!venda.formaPagamento.isEmpty()) {
+                Visual.texto(cartao, "Pagamento: " + venda.formaPagamento, 16, Visual.SUAVE, false);
+                if (venda.trocoCentavos > 0) {
+                    Visual.texto(cartao, "Troco: " + dinheiro(venda.trocoCentavos), 17, Visual.TEXTO, true);
+                }
+            }
             for (String item : venda.itens) {
                 android.widget.TextView linha = Visual.texto(cartao, item, 17, Visual.TEXTO, false);
                 linha.setPadding(0, Visual.dp(this, 10), 0, 0);
@@ -126,11 +146,15 @@ public class VendasHojeActivity extends Activity {
         final long data;
         final long total;
         final ArrayList<String> itens;
+        final String formaPagamento;
+        final long trocoCentavos;
 
-        Registro(long data, long total, ArrayList<String> itens) {
+        Registro(long data, long total, ArrayList<String> itens, String formaPagamento, long trocoCentavos) {
             this.data = data;
             this.total = total;
             this.itens = itens;
+            this.formaPagamento = formaPagamento;
+            this.trocoCentavos = trocoCentavos;
         }
     }
 }
