@@ -16,6 +16,11 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.mlkit.codescanner.GmsBarcodeScanner;
+import com.google.android.gms.mlkit.codescanner.GmsBarcodeScannerOptions;
+import com.google.android.gms.mlkit.codescanner.GmsBarcodeScanning;
+import com.google.mlkit.vision.barcode.common.Barcode;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -35,6 +40,8 @@ public class VenderActivity extends Activity {
     private EditText busca;
     private TextView resultadoBusca;
     private Button limparBusca;
+    private Button lerCodigo;
+    private boolean lendoCodigo;
     private boolean erroProdutos;
     private EditText quantidade;
     private LinearLayout lista;
@@ -62,6 +69,8 @@ public class VenderActivity extends Activity {
         busca.setHint("Ex.: arroz ou 789123");
         Visual.campo(busca);
         Visual.inserir(formulario, busca, 8);
+        lerCodigo = Visual.botao(formulario, "Ler código de barras", true);
+        lerCodigo.setOnClickListener(v -> lerCodigoDeBarras());
         limparBusca = Visual.botao(formulario, "Limpar busca", false);
         limparBusca.setOnClickListener(v -> busca.setText(""));
         resultadoBusca = Visual.texto(formulario, "", 16, Visual.SUAVE, false);
@@ -198,6 +207,51 @@ public class VenderActivity extends Activity {
         adicionar.setEnabled(!produtosFiltrados.isEmpty());
         selecao.setEnabled(!produtosFiltrados.isEmpty());
         limparBusca.setEnabled(!consulta.isEmpty());
+    }
+
+    private void lerCodigoDeBarras() {
+        if (lendoCodigo) return;
+        GmsBarcodeScannerOptions opcoes = new GmsBarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_EAN_13, Barcode.FORMAT_EAN_8,
+                        Barcode.FORMAT_UPC_A, Barcode.FORMAT_UPC_E,
+                        Barcode.FORMAT_CODE_128, Barcode.FORMAT_CODE_39,
+                        Barcode.FORMAT_ITF)
+                .enableAutoZoom()
+                .build();
+        lendoCodigo = true;
+        lerCodigo.setEnabled(false);
+        GmsBarcodeScanner scanner = GmsBarcodeScanning.getClient(this, opcoes);
+        scanner.startScan()
+                .addOnSuccessListener(codigo -> {
+                    if (codigo == null || codigo.getRawValue() == null
+                            || codigo.getRawValue().trim().isEmpty()) {
+                        avisar("Não foi possível ler o código. Você pode buscá-lo digitando.");
+                        return;
+                    }
+                    String valor = codigo.getRawValue().trim();
+                    busca.setText(valor);
+                    busca.setSelection(busca.getText().length());
+                    selecionarCodigo(valor);
+                    boolean encontrou = false;
+                    for (JSONObject produto : produtosFiltrados) {
+                        if (produto.optString("codigo").equals(valor)) {
+                            encontrou = true;
+                            break;
+                        }
+                    }
+                    if (encontrou) {
+                        avisar("Produto encontrado. Confira a quantidade e adicione à compra.");
+                    } else {
+                        avisar("Código lido, mas nenhum produto está cadastrado com esse código.");
+                    }
+                })
+                .addOnCanceledListener(() -> { })
+                .addOnFailureListener(erro ->
+                        avisar("Não foi possível abrir o leitor. Tente novamente ou digite o código."))
+                .addOnCompleteListener(tarefa -> {
+                    lendoCodigo = false;
+                    lerCodigo.setEnabled(true);
+                });
     }
 
     private void adicionarProduto() {
