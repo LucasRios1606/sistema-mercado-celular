@@ -12,6 +12,9 @@ import android.text.Spanned;
 import android.text.style.RelativeSizeSpan;
 
 public class MainActivity extends Activity {
+    private static final int CRIAR_BACKUP = 100;
+    private static final java.util.concurrent.atomic.AtomicBoolean exportando =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -28,9 +31,82 @@ public class MainActivity extends Activity {
                 .setOnClickListener(v -> startActivity(new Intent(this, ProdutosActivity.class)));
         acao(tela, "Vendas de hoje", "Conferir as vendas e o total do dia", false)
                 .setOnClickListener(v -> startActivity(new Intent(this, VendasHojeActivity.class)));
+        acao(tela, "Salvar cópia dos dados", "Exportar produtos, estoque e vendas", false)
+                .setOnClickListener(v -> explicarBackup());
         TextView rodape = Visual.texto(tela, "Seus dados ficam salvos neste celular.", 14, Visual.SUAVE, false);
         rodape.setPadding(0, Visual.dp(this, 24), 0, 0);
         rodape.setGravity(Gravity.CENTER);
+    }
+
+    private void explicarBackup() {
+        if (exportando.get()) {
+            android.widget.Toast.makeText(this, "Aguarde a cópia terminar.", android.widget.Toast.LENGTH_LONG).show();
+            return;
+        }
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Salvar cópia dos dados")
+                .setMessage("Você vai escolher onde guardar um arquivo com todos os produtos, o estoque e as vendas. "
+                        + "Os dados do aplicativo continuam como estão.\n\n"
+                        + "A opção de recuperar esta cópia ainda será adicionada ao aplicativo.")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Escolher local", (dialogo, botao) -> escolherLocalBackup())
+                .show();
+    }
+
+    private void escolherLocalBackup() {
+        String data = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", java.util.Locale.ROOT)
+                .format(new java.util.Date());
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
+                .addCategory(Intent.CATEGORY_OPENABLE)
+                .setType("application/json")
+                .putExtra(Intent.EXTRA_TITLE, "mercadinho-backup-" + data + ".json");
+        try {
+            startActivityForResult(intent, CRIAR_BACKUP);
+        } catch (android.content.ActivityNotFoundException e) {
+            android.widget.Toast.makeText(this, "Não foi possível abrir o seletor de arquivos neste celular.",
+                    android.widget.Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int pedido, int resultado, Intent dados) {
+        super.onActivityResult(pedido, resultado, dados);
+        if (pedido != CRIAR_BACKUP || resultado != RESULT_OK || dados == null || dados.getData() == null) return;
+        if (!exportando.compareAndSet(false, true)) return;
+        android.net.Uri destino = dados.getData();
+        android.content.Context contexto = getApplicationContext();
+        android.os.Handler principal = new android.os.Handler(android.os.Looper.getMainLooper());
+        android.widget.Toast.makeText(this, "Salvando cópia dos dados…", android.widget.Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            String mensagem;
+            try {
+                // Uma única leitura mantém produtos e vendas no mesmo retrato dos dados.
+                java.util.Map<String, ?> salvos = contexto.getSharedPreferences("produtos", MODE_PRIVATE).getAll();
+                Object produtos = salvos.get("lista");
+                Object vendas = salvos.get("vendas");
+                org.json.JSONObject copia = new org.json.JSONObject()
+                        .put("aplicativo", "com.mercadinho.app")
+                        .put("versaoFormato", 1)
+                        .put("criadoEm", System.currentTimeMillis())
+                        .put("produtos", new org.json.JSONArray(produtos == null ? "[]" : (String) produtos))
+                        .put("vendas", new org.json.JSONArray(vendas == null ? "[]" : (String) vendas));
+                byte[] conteudo = copia.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                try (java.io.OutputStream saida = contexto.getContentResolver().openOutputStream(destino, "wt")) {
+                    if (saida == null) throw new java.io.IOException("Destino indisponível");
+                    saida.write(conteudo);
+                    saida.flush();
+                }
+                mensagem = "Cópia salva no local escolhido.";
+            } catch (org.json.JSONException | ClassCastException e) {
+                mensagem = "Não foi possível criar a cópia: há dados inválidos no aplicativo. Os dados originais foram mantidos.";
+            } catch (java.io.IOException | RuntimeException e) {
+                mensagem = "Não foi possível concluir a cópia. O arquivo escolhido pode estar incompleto; tente salvar novamente. Os dados originais foram mantidos.";
+            } finally {
+                exportando.set(false);
+            }
+            String aviso = mensagem;
+            principal.post(() -> android.widget.Toast.makeText(contexto, aviso, android.widget.Toast.LENGTH_LONG).show());
+        }, "exportar-backup").start();
     }
 
     private Button acao(LinearLayout tela, String titulo, String descricao, boolean principal) {

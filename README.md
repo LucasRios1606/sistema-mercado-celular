@@ -25,7 +25,7 @@ O projeto tem a tela inicial com os botões **Vender**, **Produtos** e **Vendas 
 
 A tela **Produtos** também permite buscar por parte do nome ou código enquanto se digita, ignorando acentos e diferenças entre maiúsculas e minúsculas. **Limpar busca** mostra a lista completa novamente. O filtro é mantido ao girar a tela e reaplicado após cadastrar, editar ou repor estoque. Quando não há resultados, a tela orienta a mudar ou limpar a busca.
 
-Os backups ficam para uma etapa seguinte.
+**Salvar cópia dos dados**, na tela inicial, exporta todos os produtos (incluindo estoque) e todo o histórico de vendas para um arquivo JSON no local escolhido pelo usuário. O arquivo identifica o aplicativo, a versão do formato e a data da cópia. A gravação ocorre em segundo plano e só informa sucesso após fechar o arquivo. Cancelar a escolha não exporta dados; falhas são informadas sem alterar os registros originais. Esta etapa permite apenas exportar: a recuperação da cópia ainda será implementada, como informa o aviso antes de salvar.
 
 As telas usam fundo claro, botões grandes e cartões com preço e estoque destacados. O total da compra tem uma área própria. Os campos de cadastro têm rótulos permanentes. O visual compartilhado fica na classe `Visual`.
 
@@ -34,6 +34,15 @@ As telas usam fundo claro, botões grandes e cartões com preço e estoque desta
 1. Compilar e testar a leitura de código de barras no celular.
 2. Conferir códigos cadastrados e não cadastrados, junto com busca manual, forma de pagamento e troco.
 3. Construir e testar uma funcionalidade por vez.
+
+## Teste da exportação no celular
+
+- Com produtos e vendas cadastrados, usar **Salvar cópia dos dados**, escolher um local e conferir o aviso de sucesso. Abrir o JSON e comparar nomes, códigos, preços, estoque e vendas (incluindo as de dias anteriores) com os dados originais.
+- Repetir sem cadastros: `produtos` e `vendas` devem ser listas vazias.
+- Cancelar o aviso inicial e depois cancelar o seletor de arquivos; nenhuma mensagem de sucesso deve aparecer.
+- Girar o celular durante a escolha do local e concluir a exportação.
+- Testar falha de gravação, como destino indisponível ou sem espaço: deve aparecer aviso de falha; um arquivo parcial não deve ser tratado como cópia válida.
+- Conferir que cadastrar, vender e repor estoque continuam funcionando após exportar ou cancelar.
 
 ## Teste da lógica de compra
 
