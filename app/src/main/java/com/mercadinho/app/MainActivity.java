@@ -33,6 +33,8 @@ public class MainActivity extends Activity {
                 .setOnClickListener(v -> startActivity(new Intent(this, VendasHojeActivity.class)));
         acao(tela, "Salvar cópia dos dados", "Exportar produtos, estoque e vendas", false)
                 .setOnClickListener(v -> explicarBackup());
+        acao(tela, "Recuperar cópia", "Restaurar dados de um arquivo salvo", false)
+                .setOnClickListener(v -> startActivity(new Intent(this, RestaurarBackupActivity.class)));
         TextView rodape = Visual.texto(tela, "Seus dados ficam salvos neste celular.", 14, Visual.SUAVE, false);
         rodape.setPadding(0, Visual.dp(this, 24), 0, 0);
         rodape.setGravity(Gravity.CENTER);
@@ -47,7 +49,7 @@ public class MainActivity extends Activity {
                 .setTitle("Salvar cópia dos dados")
                 .setMessage("Você vai escolher onde guardar um arquivo com todos os produtos, o estoque e as vendas. "
                         + "Os dados do aplicativo continuam como estão.\n\n"
-                        + "A opção de recuperar esta cópia ainda será adicionada ao aplicativo.")
+                        + "Para usar este arquivo depois, escolha Recuperar cópia na tela inicial.")
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Escolher local", (dialogo, botao) -> escolherLocalBackup())
                 .show();

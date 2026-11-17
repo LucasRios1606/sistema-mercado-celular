@@ -25,7 +25,9 @@ O projeto tem a tela inicial com os botões **Vender**, **Produtos** e **Vendas 
 
 A tela **Produtos** também permite buscar por parte do nome ou código enquanto se digita, ignorando acentos e diferenças entre maiúsculas e minúsculas. **Limpar busca** mostra a lista completa novamente. O filtro é mantido ao girar a tela e reaplicado após cadastrar, editar ou repor estoque. Quando não há resultados, a tela orienta a mudar ou limpar a busca.
 
-**Salvar cópia dos dados**, na tela inicial, exporta todos os produtos (incluindo estoque) e todo o histórico de vendas para um arquivo JSON no local escolhido pelo usuário. O arquivo identifica o aplicativo, a versão do formato e a data da cópia. A gravação ocorre em segundo plano e só informa sucesso após fechar o arquivo. Cancelar a escolha não exporta dados; falhas são informadas sem alterar os registros originais. Esta etapa permite apenas exportar: a recuperação da cópia ainda será implementada, como informa o aviso antes de salvar.
+**Salvar cópia dos dados**, na tela inicial, exporta todos os produtos (incluindo estoque) e todo o histórico de vendas para um arquivo JSON no local escolhido pelo usuário. O arquivo identifica o aplicativo, a versão do formato e a data da cópia. A gravação ocorre em segundo plano e só informa sucesso após fechar o arquivo. Cancelar a escolha não exporta dados; falhas são informadas sem alterar os registros originais.
+
+**Recuperar cópia** permite escolher um arquivo de até 10 MB, conferir a data e as quantidades e confirmar a substituição de todos os produtos, estoque e vendas. Não mescla cadastros. Antes de continuar, a tela recomenda salvar uma cópia dos dados atuais e destaca quando a cópia escolhida está vazia. A validação rejeita formato incompatível, campos ausentes, códigos e IDs duplicados, valores inválidos, estouro numérico, totais divergentes e pagamentos inconsistentes; vendas antigas sem os campos de pagamento continuam aceitas. A leitura e a gravação ocorrem em segundo plano, mantendo a operação durante a rotação. Cancelar a seleção ou a confirmação não grava nada. Os dois conjuntos são gravados juntos; se a gravação retornar falha, o app tenta reverter ambos e informa caso não consiga confirmar a reversão. A restauração no aparelho ainda precisa de validação prática.
 
 As telas usam fundo claro, botões grandes e cartões com preço e estoque destacados. O total da compra tem uma área própria. Os campos de cadastro têm rótulos permanentes. O visual compartilhado fica na classe `Visual`.
 
@@ -44,6 +46,17 @@ As telas usam fundo claro, botões grandes e cartões com preço e estoque desta
 - Testar falha de gravação, como destino indisponível ou sem espaço: deve aparecer aviso de falha; um arquivo parcial não deve ser tratado como cópia válida.
 - Conferir que cadastrar, vender e repor estoque continuam funcionando após exportar ou cancelar.
 
+## Teste da recuperação no celular
+
+Usar dados de teste e guardar uma cópia antes de começar.
+
+- Exportar produtos e vendas, alterar os dados no app e recuperar o arquivo exportado. Conferir que o estoque, os preços e o histórico voltaram ao estado da cópia, inclusive vendas de outros dias e pagamentos.
+- Escolher um arquivo inválido, truncado, de outro aplicativo ou maior que 10 MB: a recuperação deve ficar desativada e os dados atuais devem continuar iguais.
+- Cancelar o seletor e a confirmação de substituição: nenhum registro deve mudar.
+- Testar uma cópia vazia: conferir o aviso explícito e que só a confirmação deixa as duas listas vazias.
+- Girar a tela durante a leitura, na prévia e durante a gravação: a operação não deve ser repetida nem perdida. Na confirmação, se o diálogo fechar ao girar, tocar novamente em **Recuperar esta cópia**.
+- Simular falha de gravação e conferir a mensagem e a reversão; reabrir o app para verificar os dados persistidos. Não usar o caixa se a mensagem informar que a reversão não pôde ser confirmada.
+
 ## Teste da lógica de compra
 
 Com um JDK instalado, execute na pasta do projeto:
@@ -59,8 +72,14 @@ javac -encoding UTF-8 -d out/test app/src/main/java/com/mercadinho/app/BuscaProd
 java -cp out/test com.mercadinho.app.BuscaProdutoTest
 javac -encoding UTF-8 -d out/test app/src/main/java/com/mercadinho/app/ValoresProduto.java app/src/main/java/com/mercadinho/app/Pagamento.java test/com/mercadinho/app/PagamentoTest.java
 java -cp out/test com.mercadinho.app.PagamentoTest
+javac -encoding UTF-8 -d out/test app/src/main/java/com/mercadinho/app/ValidacaoBackup.java test/com/mercadinho/app/ValidacaoBackupTest.java
+java -cp out/test com.mercadinho.app.ValidacaoBackupTest
+javac -encoding UTF-8 -d out/test app/src/main/java/com/mercadinho/app/RestauracaoDados.java test/com/mercadinho/app/RestauracaoDadosTest.java
+java -cp out/test com.mercadinho.app.RestauracaoDadosTest
 ```
 
 Os testes verificam os cálculos e limites do carrinho, a soma das vendas, a seleção do dia em diferentes fusos, os preços em centavos e os limites da reposição de estoque. O teste de datas requer JDK 8 ou superior. Não substituem a compilação Android nem os testes de gravação e navegação no celular.
+
+Os testes de backup cobrem 37 casos das regras de integridade e compatibilidade e 5 cenários da gravação e reversão com armazenamento simulado. Não exercitam o parser JSON do Android, o seletor de arquivos nem a persistência real de `SharedPreferences`.
 
 O desenvolvimento será feito em alterações pequenas, com explicação do que mudou e autorização do responsável antes de cada commit.
